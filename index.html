@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Oficina Viva</title>
+<meta name="theme-color" content="#0a0c11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Oficina">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Doto:wght@800;900&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: an office tower at night. An elevator panel up top switches floors (modes); each floor's ambient light changes; bottom tab bar like a native app. */
+:root{
+  --bg:#0a0c11; --surface:#12151d; --surface2:#1a1e29; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
+  --ink:#eef1f6; --muted:#8c94a5; --dim:#5d6575;
+  --ok:#6ee7a8; --warn:#ffc35c; --err:#ff7f7f;
+  --accent:#8fb4ff; --glow:59,91,219;
+  --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --body:"Figtree",-apple-system,system-ui,sans-serif;
+  --led:"Doto","Courier New",monospace;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  color-scheme:dark;
+}
+body[data-mode="personal"]{--accent:#8fb4ff;--glow:70,105,235}
+body[data-mode="finanzas"]{--accent:#5fe0a4;--glow:15,150,100}
+body[data-mode="dj"]{--accent:#ff5fc8;--glow:190,30,160}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+body::before{content:"";position:fixed;inset:-20% -30% auto;height:70vh;z-index:-1;pointer-events:none;
+  background:radial-gradient(50% 55% at 50% 30%,rgba(var(--glow),.42),transparent 70%);transition:background .6s}
+button,select,textarea,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.app{max-width:760px;margin:0 auto;padding:calc(var(--safe-t) + 14px) 16px calc(var(--safe-b) + 96px)}
+
+/* top bar */
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.logo{width:30px;height:30px;border-radius:9px}
+.topbar b{font:800 19px var(--display);letter-spacing:-.02em;flex:1}
+.live{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--muted);background:var(--surface);border:1px solid var(--line);padding:5px 10px;border-radius:99px}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.live.on i{background:var(--warn);box-shadow:0 0 8px var(--warn);animation:blink 1.2s infinite}
+
+/* elevator panel */
+.lift{background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:26px;padding:16px;box-shadow:0 20px 50px -25px rgba(var(--glow),.6)}
+.display{display:flex;align-items:center;gap:14px;background:#06070b;border:1px solid var(--line);border-radius:18px;padding:12px 16px;box-shadow:inset 0 2px 10px rgba(0,0,0,.6)}
+.dig{font:900 58px/1 var(--led);color:var(--accent);text-shadow:0 0 14px rgba(var(--glow),.9),0 0 30px rgba(var(--glow),.5);min-width:44px;text-align:center}
+.arrow{font-size:14px;color:var(--accent);opacity:.8;transition:transform .4s}
+.arrow.down{transform:rotate(180deg)}
+.dtext{min-width:0}
+.dtext b{display:block;font:800 26px/1.05 var(--display);letter-spacing:-.02em}
+.dtext span{font-size:13px;color:var(--muted)}
+.floors{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.fbtn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 0}
+.fbtn .ring{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font:900 22px var(--led);color:var(--dim);
+  background:radial-gradient(circle at 50% 35%,#262b38,#141821);border:1px solid var(--line2);box-shadow:0 3px 0 #05060a,inset 0 1px 0 rgba(255,255,255,.08);transition:all .25s}
+.fbtn span{font-size:13px;font-weight:600;color:var(--muted)}
+.fbtn[aria-pressed="true"] .ring{color:var(--bg);background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px rgba(var(--glow),.25),0 0 22px rgba(var(--glow),.8);transform:translateY(2px)}
+.fbtn[aria-pressed="true"] span{color:var(--ink)}
+.fbtn:active .ring{transform:translateY(3px)}
+
+.notice{margin-top:16px;border:1px solid rgba(255,195,92,.35);background:rgba(255,195,92,.08);border-radius:18px;padding:14px 16px;font-size:14.5px}
+.notice b{display:block;font:700 16px var(--display);margin-bottom:2px}
+.notice .btn{margin-top:10px}
+
+.h2{display:flex;align-items:baseline;gap:8px;margin:24px 4px 12px;font:800 20px var(--display);letter-spacing:-.01em}
+.h2 span{font:600 13px var(--body);color:var(--muted)}
+
+/* agents */
+.team{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.agent{position:relative;display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:14px;border-radius:22px;background:var(--surface);border:1px solid var(--line);min-width:0;transition:transform .15s,border-color .3s,box-shadow .3s;overflow:hidden}
+.agent::after{content:"";position:absolute;inset:auto -30% -60% -30%;height:90%;background:radial-gradient(closest-side,color-mix(in srgb,var(--c) 30%,transparent),transparent);opacity:.5;pointer-events:none}
+.agent:active{transform:scale(.97)}
+.agent.busy{border-color:rgba(var(--glow),.7);box-shadow:0 0 0 1px rgba(var(--glow),.4),0 10px 30px -10px rgba(var(--glow),.7)}
+.agent.done{border-color:rgba(110,231,168,.5)}
+.agent .room{position:absolute;top:12px;right:14px;font:800 13px var(--led);color:var(--dim);letter-spacing:.05em}
+.pic{width:64px;height:64px;border-radius:50%;overflow:hidden;margin-bottom:10px;box-shadow:0 0 0 3px var(--surface),0 0 0 4px var(--line2);position:relative;z-index:1}
+.agent .nm{font:800 19px/1.1 var(--display);letter-spacing:-.01em;position:relative;z-index:1}
+.agent .rl{font-size:13.5px;color:var(--muted);position:relative;z-index:1;line-height:1.3;margin-top:2px}
+.state{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:12.5px;font-weight:600;color:var(--dim);max-width:100%;position:relative;z-index:1}
+.state i{flex:none;width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.state em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.state.busy{color:var(--warn)} .state.busy i{background:var(--warn);animation:blink 1s infinite}
+.state.done{color:var(--ok)} .state.done i{background:var(--ok)}
+@keyframes blink{50%{opacity:.25}}
+.face .eyes{transform-box:fill-box;transform-origin:center}
+.busy .face .eyes{animation:look 2.4s infinite}
+@keyframes look{0%,100%{transform:translateX(0)}30%{transform:translateX(-1.5px)}60%{transform:translateX(1.5px)}75%{transform:translateX(1.5px) scaleY(.1)}80%{transform:translateX(1.5px)}}
+
+/* composer */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:16px}
+.lbl{display:block;font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.picker{display:flex;gap:8px;overflow-x:auto;margin:0 -16px 14px;padding:2px 16px 4px;scrollbar-width:none}
+.picker::-webkit-scrollbar{display:none}
+.chip{flex:none;display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:99px;background:var(--surface2);border:1px solid var(--line);font-size:14px;font-weight:600;color:var(--muted)}
+.chip .mini{width:30px;height:30px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#262b38;font-size:15px}
+.chip[aria-pressed="true"]{border-color:var(--accent);color:var(--ink);background:rgba(var(--glow),.18)}
+textarea,input[type=password],input[type=text],select{width:100%;background:#0d1017;border:1px solid var(--line2);border-radius:16px;padding:12px 14px;font-size:16px}
+textarea{resize:none;min-height:96px;line-height:1.45}
+.sugs{display:flex;gap:8px;overflow-x:auto;margin:12px -16px 0;padding:0 16px 2px;scrollbar-width:none}
+.sugs::-webkit-scrollbar{display:none}
+.sug{flex:none;max-width:250px;text-align:left;font-size:13.5px;color:var(--muted);background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:9px 12px;line-height:1.35}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;background:var(--accent);color:var(--bg);font-weight:700;font-size:16px;padding:14px;border-radius:16px;box-shadow:0 10px 24px -10px rgba(var(--glow),.9)}
+.btn:disabled{opacity:.5}
+.btn.alt{background:var(--surface2);color:var(--ink);box-shadow:none;border:1px solid var(--line2)}
+.btn.inline{width:auto;padding:10px 16px;font-size:15px}
+
+/* tasks */
+.empty{text-align:center;color:var(--muted);font-size:14.5px;padding:26px 18px;border:1px dashed var(--line2);border-radius:20px}
+.tlist{display:grid;gap:12px}
+.task{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:14px;min-width:0}
+.task.new{border-color:rgba(110,231,168,.45)}
+.task header{display:flex;align-items:center;gap:10px}
+.task header .pic{width:38px;height:38px;margin:0;box-shadow:none}
+.task header div{flex:1;min-width:0;line-height:1.2}
+.task header b{font:800 16px var(--display)}
+.task header small{display:block;font-size:12.5px;color:var(--muted)}
+.pill{flex:none;font-size:11.5px;font-weight:700;letter-spacing:.06em;padding:4px 9px;border-radius:99px}
+.pill.busy{color:var(--warn);background:rgba(255,195,92,.12)}
+.pill.done{color:var(--ok);background:rgba(110,231,168,.12)}
+.pill.err{color:var(--err);background:rgba(255,127,127,.12)}
+.ttext{margin:12px 0 0;font-weight:600;font-size:15px}
+.result{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:15px;overflow-wrap:anywhere}
+.result.clamp{max-height:190px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 60%,transparent);mask-image:linear-gradient(#000 60%,transparent)}
+.errline{color:var(--err);font-size:14px;margin:10px 0 0}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.ghost{font-size:14px;font-weight:600;padding:8px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--line)}
+.ghost.danger{color:var(--err)}
+.thinking{display:inline-flex;gap:4px;align-items:center;color:var(--warn);font-size:13px;font-weight:600}
+.thinking i{width:5px;height:5px;border-radius:50%;background:currentColor;animation:blink 1s infinite}
+.thinking i:nth-child(2){animation-delay:.2s}.thinking i:nth-child(3){animation-delay:.4s}
+
+/* markdown */
+.md>*:first-child{margin-top:0}.md>*:last-child{margin-bottom:0}
+.md h3,.md h4,.md h5{font:800 17px/1.3 var(--display);margin:14px 0 4px}
+.md p{margin:7px 0}
+.md ul,.md ol{margin:7px 0;padding-left:22px}
+.md li{margin:3px 0}
+.md strong{color:#fff}
+.md code{font:13.5px ui-monospace,Menlo,monospace;background:#0d1017;padding:1px 6px;border-radius:6px}
+.md pre{background:#0d1017;border:1px solid var(--line);border-radius:12px;padding:12px;overflow-x:auto}
+.md pre code{background:none;padding:0}
+.md .tbl{overflow-x:auto;margin:8px 0}
+.md table{border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.md th,.md td{border:1px solid var(--line2);padding:6px 9px;text-align:left;vertical-align:top}
+.md th{background:var(--surface2)}
+.md hr{border:0;border-top:1px solid var(--line)}
+
+/* settings */
+.set{display:grid;gap:14px}
+.help{font-size:14px;color:var(--muted);margin:8px 0 0}
+.help a{color:var(--accent)}
+.row2{display:flex;gap:8px}
+.row2 .btn{margin-top:0}
+.ok{color:var(--ok)} .bad{color:var(--err)}
+.steps{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:14px}
+
+/* tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:8px 12px calc(var(--safe-b) + 8px);background:rgba(10,12,17,.82);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border-top:1px solid var(--line)}
+.tabbar nav{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.tab{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;font-size:11.5px;font-weight:600;color:var(--dim)}
+.tab svg{width:25px;height:25px}
+.tab[aria-selected="true"]{color:var(--accent)}
+.badge{position:absolute;top:2px;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:var(--accent);color:var(--bg);font-size:11px;font-weight:800;display:grid;place-items:center;padding:0 5px}
+
+/* chat sheet */
+.scrim{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);animation:fade .2s}
+.sheet{position:fixed;z-index:21;left:0;right:0;bottom:0;height:calc(100% - var(--safe-t) - 18px);max-width:760px;margin:0 auto;background:var(--surface);border:1px solid var(--line2);border-bottom:0;border-radius:28px 28px 0 0;display:flex;flex-direction:column;animation:up .32s cubic-bezier(.2,.9,.25,1)}
+@keyframes up{from{transform:translateY(100%)}}
+@keyframes fade{from{opacity:0}}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line2);margin:8px auto 0}
+.sheet>header{display:flex;align-items:center;gap:12px;padding:10px 16px 14px;border-bottom:1px solid var(--line)}
+.sheet>header .pic{width:48px;height:48px;margin:0}
+.sheet>header .htxt{flex:1;min-width:0}
+.sheet h2{font:800 21px/1.1 var(--display);margin:0}
+.sheet>header p{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.x{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);font-size:20px;line-height:1;display:grid;place-items:center}
+.shbar{display:flex;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);overflow-x:auto}
+.shbar .ghost{flex:none}
+.msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+.msg{max-width:86%;padding:10px 14px;border-radius:20px;font-size:15.5px;overflow-wrap:anywhere;min-width:0}
+.msg.u{align-self:flex-end;background:var(--accent);color:var(--bg);font-weight:500;border-bottom-right-radius:6px;white-space:pre-wrap}
+.msg.a{align-self:flex-start;background:var(--surface2);border:1px solid var(--line);border-bottom-left-radius:6px}
+.chat-empty{margin:auto;text-align:center;color:var(--muted);font-size:15px;max-width:280px}
+.chat-empty .pic{width:84px;height:84px;margin:0 auto 12px}
+.chatf{display:flex;gap:8px;align-items:flex-end;padding:10px 12px calc(var(--safe-b) + 10px);border-top:1px solid var(--line)}
+.chatf textarea{min-height:46px;max-height:140px;border-radius:23px;padding:11px 16px}
+.send{flex:none;width:46px;height:46px;border-radius:50%;background:var(--accent);color:var(--bg);display:grid;place-items:center}
+.send svg{width:22px;height:22px}
+
+.toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 92px);transform:translateX(-50%);z-index:30;background:#f2f4f8;color:#0a0c11;font-weight:600;font-size:14.5px;padding:10px 18px;border-radius:99px;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:calc(100% - 32px);text-align:center;animation:fade .2s}
+
+@media (min-width:720px){
+  .sheet{left:auto;right:0;top:0;height:auto;width:440px;border-radius:0;border-bottom:1px solid var(--line2);margin:0;animation:fade .2s}
+  .grab{display:none}
+  .sheet>header{padding-top:calc(var(--safe-t) + 16px)}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body data-mode="personal">
+<div class="app">
+  <div class="topbar">
+    <img class="logo" src="icon-192.png" alt="">
+    <b>Oficina Viva</b>
+    <span class="live" id="live"><i></i><span id="liveTxt">Todos libres</span></span>
+  </div>
+
+  <section class="lift" aria-label="Pisos">
+    <div class="display">
+      <span class="arrow" id="arrow">▲</span>
+      <span class="dig" id="dig">1</span>
+      <div class="dtext"><b id="floorName">Casa</b><span id="floorSub">Piso Personal</span></div>
+    </div>
+    <div class="floors" id="floors"></div>
+  </section>
+
+  <div class="notice" id="setupNotice" hidden>
+    <b>Falta conectar los agentes</b>
+    Para que trabajen, cargá tu clave de la API de Anthropic en Ajustes.
+    <button class="btn inline" id="goSettings">Ir a Ajustes</button>
+  </div>
+  <div class="notice" id="installNotice" hidden>
+    <b>Instalala en tu iPhone</b>
+    En Safari tocá Compartir y después "Agregar a inicio". Va a quedar con su ícono y abrir a pantalla completa.
+  </div>
+
+  <!-- OFICINA -->
+  <section id="vOffice">
+    <h2 class="h2">El equipo <span id="teamSub"></span></h2>
+    <div class="team" id="team"></div>
+  </section>
+
+  <!-- TAREAS -->
+  <section id="vTasks" hidden>
+    <h2 class="h2">Nueva tarea</h2>
+    <form class="card" id="assign">
+      <span class="lbl" id="pickLbl">Para</span>
+      <div class="picker" id="picker" role="group" aria-labelledby="pickLbl"></div>
+      <label class="lbl" for="taskTxt">Qué necesitás</label>
+      <textarea id="taskTxt" placeholder="Contale con detalle, como a un compañero de trabajo."></textarea>
+      <div class="sugs" id="sugs"></div>
+      <button class="btn" id="assignBtn" type="submit">Asignar tarea</button>
+    </form>
+    <div id="lists"></div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section id="vSettings" hidden>
+    <h2 class="h2">Ajustes</h2>
+    <div class="set">
+      <div class="card">
+        <label class="lbl" for="keyIn">Clave de la API de Anthropic</label>
+        <input type="password" id="keyIn" placeholder="sk-ant-..." autocomplete="off" autocapitalize="off" spellcheck="false">
+        <div class="row2" style="margin-top:12px">
+          <button class="btn" id="saveKey">Guardar y probar</button>
+          <button class="btn alt" id="showKey" style="width:auto;padding:14px 16px">Ver</button>
+        </div>
+        <p class="help" id="keyStatus"></p>
+        <p class="help">La clave queda guardada solo en este iPhone y se usa únicamente para hablar con Anthropic. No la compartas con nadie.</p>
+        <ol class="steps">
+          <li>Entrá a <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> y creá una cuenta.</li>
+          <li>En Billing cargá algo de saldo (con unos pocos dólares alcanza para mucho).</li>
+          <li>En API Keys tocá "Create Key", copiala y pegala acá.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <label class="lbl" for="modelSel">Cerebro de los agentes</label>
+        <select id="modelSel">
+          <option value="claude-sonnet-5-5">Sonnet 5.5 · equilibrado (recomendado)</option>
+          <option value="claude-haiku-5-5">Haiku 5.5 · rápido y más barato</option>
+          <option value="claude-opus-5-5">Opus 5.5 · el más capaz, más caro</option>
+        </select>
+        <p class="help">Cambialo cuando quieras. Para el día a día, Sonnet rinde muy bien.</p>
+      </div>
+      <div class="card">
+        <span class="lbl">Tus datos</span>
+        <p class="help" style="margin-top:0">Tareas y chats se guardan en este iPhone. Si borrás los datos de Safari o desinstalás la app, se pierden.</p>
+        <button class="btn alt" id="wipe">Borrar todas las tareas y chats</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="tabbar">
+  <nav role="tablist">
+    <button class="tab" role="tab" id="tOffice" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 21v-4h6v4M8 7h2M14 7h2M8 11h2M14 11h2"/></svg>Oficina</button>
+    <button class="tab" role="tab" id="tTasks" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17"/></svg>Tareas<span class="badge" id="badge" hidden></span></button>
+    <button class="tab" role="tab" id="tSettings" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Ajustes</button>
+  </nav>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="shName">
+  <div class="grab"></div>
+  <header>
+    <div class="pic" id="shPic"></div>
+    <div class="htxt"><h2 id="shName"></h2><p id="shRole"></p></div>
+    <button class="x" id="shClose" aria-label="Cerrar">×</button>
+  </header>
+  <div class="shbar">
+    <button class="ghost" id="shTask">Asignarle una tarea</button>
+    <button class="ghost danger" id="shClear">Borrar chat</button>
+  </div>
+  <div class="msgs" id="msgs"></div>
+  <form class="chatf" id="chatForm">
+    <textarea id="chatIn" rows="1" placeholder="Escribile…"></textarea>
+    <button class="send" id="chatBtn" type="submit" aria-label="Enviar"></button>
+  </form>
+</aside>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ===== Equipo ===== */
+const SKIN = ['#f5d6bd','#f1c9a5','#e0b08a','#c68b62','#9c6644','#6e4530'];
+const MODES = [
+  { id:'personal', n:1, label:'Personal', floor:'Casa', agents:[
+    {k:'asistente', name:'Lía', role:'Asistente personal', skill:'agenda, organización, planes del día, recordatorios y decisiones cotidianas', c:'#8fb4ff', skin:1, hair:'#3a2418', hs:1},
+    {k:'dev', name:'Bruno', role:'Programación', skill:'código, scripts, automatizaciones, apps y depuración de errores', c:'#7fd1ff', skin:3, hair:'#1b1b1f', hs:0, acc:'glasses'},
+    {k:'soporte', name:'Sol', role:'Soporte técnico', skill:'problemas con la compu, el celular, apps, cuentas y wifi', c:'#b49bff', skin:4, hair:'#24160f', hs:3},
+    {k:'redes', name:'Tomi', role:'Redes sociales', skill:'posts, captions, ideas de contenido y bio para tus perfiles', c:'#ffb38a', skin:0, hair:'#c8873a', hs:0}],
+    sugs:['Organizame la semana: gimnasio 3 veces, trabajo de 9 a 18 y tiempo para producir música',
+          'Escribime un script en Python que renombre mis archivos de música como "Artista - Título"',
+          'Mi notebook anda lenta, ¿qué reviso primero y en qué orden?']},
+  { id:'finanzas', n:2, label:'Finanzas', floor:'Tesorería', agents:[
+    {k:'contador', name:'Marta', role:'Contadora', skill:'presupuestos, control de gastos, ahorro y planillas', c:'#5fe0a4', skin:2, hair:'#9aa0aa', hs:2, acc:'glasses'},
+    {k:'analista', name:'Iván', role:'Analista financiero', skill:'explicar inversiones, comparar opciones y riesgos para que decidas vos', c:'#4fd1c5', skin:5, hair:'#121212', hs:0},
+    {k:'facturacion', name:'Carla', role:'Facturación e impuestos', skill:'facturas, cobros, recordatorios de pago y dudas impositivas generales', c:'#d6e86b', skin:1, hair:'#6b2e1f', hs:1},
+    {k:'marketing', name:'Nico', role:'Marketing', skill:'estrategia, precios, campañas y cómo conseguir clientes', c:'#ffcf6b', skin:3, hair:'#2b2b2b', hs:3}],
+    sugs:['Armame un presupuesto mensual simple con categorías para un DJ freelance',
+          'Explicame la diferencia entre plazo fijo, fondos y ETFs en 5 minutos',
+          'Redactá un mail amable para cobrar una factura atrasada 30 días']},
+  { id:'dj', n:3, label:'DJ', floor:'Cabina', agents:[
+    {k:'selector', name:'Rita', role:'Selectora de sets', skill:'armado de sets, BPM, tonalidad, transiciones y Rekordbox', c:'#ff5fc8', skin:4, hair:'#ff7ad6', hs:1, acc:'phones'},
+    {k:'productor', name:'Leo', role:'Productor musical', skill:'producción, arreglos, mezcla, máster y diseño de sonido', c:'#9b7bff', skin:0, hair:'#1e1e22', hs:0, acc:'phones'},
+    {k:'promo', name:'Juli', role:'Redes y promo', skill:'reels, posts, lanzamientos, flyers y crecimiento de audiencia', c:'#ff8f6b', skin:2, hair:'#f0c75e', hs:2},
+    {k:'booking', name:'Fede', role:'Booking y manager', skill:'mails a clubes, tarifas, contratos, riders y press kit', c:'#6bd6ff', skin:5, hair:'#0f0f10', hs:0, acc:'glasses'}],
+    sugs:['Armame un set de 1 hora de house melódico que suba de 120 a 124 BPM con tonalidades compatibles',
+          'Escribí un mail para pedir fecha en un club de Montevideo y adjuntar mi press kit',
+          'Dame 5 ideas de reels que muestren cómo preparo un set']}
+];
+const AG = {};
+MODES.forEach(m => m.agents.forEach((a,i) => { a.id = m.id + '-' + a.k; a.mode = m.id; a.room = m.n*100 + i + 1; AG[a.id] = a; }));
+const M = id => MODES.find(m => m.id === id);
+const $ = id => document.getElementById(id);
+
+function face(a){
+  const s = SKIN[a.skin], h = a.hair;
+  const hair = [
+    `<path d="M19.6 28c-.6-9.5 5-15.5 12.4-15.5S45 18.5 44.4 28c-2.5-5.5-7.5-8-12.4-8s-9.9 2.5-12.4 8z" fill="${h}"/>`,
+    `<path d="M17.5 31c-.5-12 6-18.5 14.5-18.5S47 19 46.5 31v13c-2.6 0-4-2-4-4.5V27c-4.5-1.7-8.4-5-10-8.6-2.6 4.2-7.6 7.3-11 8.6v12.5c0 2.5-1.4 4.5-4 4.5z" fill="${h}"/>`,
+    `<circle cx="32" cy="11.5" r="5.5" fill="${h}"/><path d="M19.6 28c-.6-9.5 5-15.5 12.4-15.5S45 18.5 44.4 28c-2.5-5.5-7.5-8-12.4-8s-9.9 2.5-12.4 8z" fill="${h}"/>`,
+    `<g fill="${h}"><circle cx="22" cy="21" r="5"/><circle cx="27" cy="16" r="5.5"/><circle cx="33" cy="14.5" r="5.5"/><circle cx="39" cy="17" r="5.5"/><circle cx="43" cy="22.5" r="4.5"/><circle cx="20.5" cy="26.5" r="3.5"/><circle cx="44" cy="27.5" r="3.5"/></g>`
+  ][a.hs];
+  const acc = a.acc === 'glasses'
+    ? `<g fill="none" stroke="#14161c" stroke-width="1.6"><circle cx="27" cy="29.5" r="3.6"/><circle cx="37" cy="29.5" r="3.6"/><path d="M30.6 29.5h2.8"/></g>`
+    : a.acc === 'phones'
+    ? `<path d="M18 30a14 14 0 0 1 28 0" fill="none" stroke="#14161c" stroke-width="3"/><rect x="14.5" y="27" width="6.5" height="10" rx="3" fill="#14161c"/><rect x="43" y="27" width="6.5" height="10" rx="3" fill="#14161c"/><rect x="15.5" y="29" width="2" height="6" rx="1" fill="${a.c}"/><rect x="46.5" y="29" width="2" height="6" rx="1" fill="${a.c}"/>` : '';
+  return `<svg class="face" viewBox="0 0 64 64" aria-hidden="true">
+    <rect width="64" height="64" fill="${a.c}" opacity=".9"/>
+    <circle cx="20" cy="14" r="18" fill="#fff" opacity=".12"/>
+    <path d="M9 64c2.2-12.5 11.5-18.5 23-18.5S52.8 51.5 55 64z" fill="#14161c"/>
+    <path d="M26 46.5l6 6 6-6" fill="none" stroke="${a.c}" stroke-width="2.2" stroke-linejoin="round"/>
+    <rect x="27" y="37" width="10" height="10" rx="4" fill="${s}"/>
+    <ellipse cx="32" cy="29" rx="12" ry="13.5" fill="${s}"/>
+    ${hair}
+    <g class="eyes" fill="#14161c"><circle cx="27" cy="29.5" r="1.7"/><circle cx="37" cy="29.5" r="1.7"/></g>
+    <path d="M28.2 35.2q3.8 2.8 7.6 0" fill="none" stroke="#14161c" stroke-width="1.6" stroke-linecap="round"/>
+    ${acc}
+  </svg>`;
+}
+
+/* ===== Datos locales ===== */
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function lsSet(k,v){ try { localStorage.setItem(k,v); } catch(e){ toast('El iPhone no dejó guardar. Revisá el espacio libre.'); } }
+let docs = {};
+try { docs = JSON.parse(lsGet('ov-docs') || '{}') || {}; } catch(e){ docs = {}; }
+const store = {
+  set(id, data){ docs[id] = data; lsSet('ov-docs', JSON.stringify(docs)); renderAll(); },
+  del(id){ delete docs[id]; lsSet('ov-docs', JSON.stringify(docs)); renderAll(); }
+};
+const cfg = {
+  get key(){ return lsGet('ov-key') || ''; },
+  get model(){ return lsGet('ov-model') || 'claude-sonnet-5-5'; }
+};
+
+let mode = M(lsGet('ov-mode')) ? lsGet('ov-mode') : 'personal';
+let view = 'office', pick = 'auto', sheetAgent = null;
+const live = new Map(), chatLive = new Map(), openTasks = new Set();
+
+/* ===== Conexión con Anthropic ===== */
+function apiError(status, msg){
+  const m = (msg || '').toLowerCase();
+  if (status === 401) return 'La clave no es válida. Revisala en Ajustes.';
+  if (status === 403) return 'Esta clave no tiene permiso. Creá una nueva en la consola de Anthropic.';
+  if (m.includes('credit') || m.includes('balance')) return 'No te queda saldo en la API. Cargá saldo en console.anthropic.com.';
+  if (status === 404 || m.includes('model')) return 'Ese modelo no está disponible para tu cuenta. Probá otro en Ajustes.';
+  if (status === 429) return 'Demasiados pedidos seguidos. Esperá un minuto y probá de nuevo.';
+  if (status === 529 || status >= 500) return 'Anthropic está saturado en este momento. Probá en un rato.';
+  return msg || 'Algo falló. Probá de nuevo.';
+}
+async function ask({ system, messages, model, maxTokens = 4096, signal, onText }){
+  if (!cfg.key) throw { message:'Primero cargá tu clave en Ajustes.', noKey:true };
+  let res;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', signal,
+      headers:{ 'content-type':'application/json', 'x-api-key':cfg.key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+      body: JSON.stringify({ model: model || cfg.model, max_tokens:maxTokens, system, messages, stream:true })
+    });
+  } catch(e){
+    if (e.name === 'AbortError') throw { aborted:true, message:'Detenido.' };
+    throw { message:'Sin conexión a internet.' };
+  }
+  if (!res.ok){ let j = null; try { j = await res.json(); } catch(e){} throw { message: apiError(res.status, j?.error?.message) }; }
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = '', text = '';
+  try {
+    while (true){
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream:true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0){
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line.startsWith('data:')) continue;
+        let ev; try { ev = JSON.parse(line.slice(5)); } catch(e){ continue; }
+        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta'){ text += ev.delta.text; onText && onText(text); }
+        else if (ev.type === 'error') throw { message: apiError(0, ev.error?.message), partial:text };
+      }
+    }
+  } catch(e){
+    if (e.name === 'AbortError') throw { aborted:true, message:'Detenido.', partial:text };
+    if (e.message) throw { ...e, partial: e.partial ?? text };
+    throw { message:'Se cortó la conexión.', partial:text };
+  }
+  if (!text) throw { message:'El agente no devolvió nada. Probá reformular.' };
+  return text;
+}
+function persona(a){
+  const m = M(a.mode);
+  let s = `Sos ${a.name}, ${a.role} en "Oficina Viva", el equipo personal de agentes de un usuario de Uruguay que también es DJ. Estás en el piso ${m.label}. Tu especialidad: ${a.skill}.\n` +
+    `Respondé siempre en español rioplatense, cálido, directo y práctico. Cuando te asignan una tarea, entregá el trabajo terminado y listo para usar, no un plan de cómo lo harías. ` +
+    `Usá Markdown simple (## títulos cortos, listas, **negritas**, tablas cuando ayuden). Si falta un dato clave, asumí lo razonable y aclaralo en una línea al final. ` +
+    `Si el pedido es claramente de otra especialidad, hacé lo que puedas y sugerí en una línea qué compañero de la oficina lo haría mejor.`;
+  if (a.mode === 'finanzas') s += ' No sos asesor financiero licenciado: das información, números y opciones claras para que el usuario decida, sin recomendar comprar o vender algo puntual.';
+  return s;
+}
+const today = () => new Date().toLocaleDateString('es-UY', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+/* ===== Tareas ===== */
+const tasks = () => Object.entries(docs).filter(([,d]) => d && d.kind === 'task').map(([id,d]) => ({ id, ...d })).sort((a,b) => b.createdAt - a.createdAt);
+const isBusy = t => t.status === 'working' && live.has(t.id);
+
+async function pickAgent(text){
+  const ags = M(mode).agents;
+  try {
+    const out = await ask({ model:'claude-haiku-5-5', maxTokens:30,
+      system:'Elegís qué empleado hace una tarea. Respondé solo con el id, sin nada más.',
+      messages:[{ role:'user', content:'Empleados:\n' + ags.map(a => `${a.id}: ${a.role} (${a.skill})`).join('\n') + '\n\nTarea: ' + text.slice(0,2000) }] });
+    const id = ags.map(a => a.id).find(x => out.includes(x));
+    if (id) return id;
+  } catch(e){}
+  return ags[0].id;
+}
+async function runTask(id){
+  const t = docs[id]; if (!t) return;
+  const a = AG[t.agentId];
+  live.set(id, ''); renderAll();
+  try {
+    const text = await ask({ system: persona(a) + `\nHoy es ${today()}.`, messages:[{ role:'user', content:'Tarea asignada:\n' + t.text }],
+      onText: tx => { live.set(id, tx); paintLive(id); } });
+    live.delete(id);
+    store.set(id, { ...docs[id], status:'done', result:text, error:'', updatedAt:Date.now(), seen:false });
+    notify(`${a.name} terminó una tarea`);
+  } catch(e){
+    live.delete(id);
+    store.set(id, { ...docs[id], status:'error', result:e.partial || '', error:e.message, updatedAt:Date.now() });
+  }
+}
+function paintLive(id){
+  const el = document.querySelector(`[data-live="${id}"]`);
+  if (el) el.innerHTML = live.get(id) ? md(live.get(id)) : thinking('Pensando');
+}
+const thinking = t => `<span class="thinking"><i></i><i></i><i></i> ${t}</span>`;
+function notify(t){ if (document.hidden) return; toast(t); if (navigator.vibrate) navigator.vibrate(30); }
+
+$('assign').addEventListener('submit', async e => {
+  e.preventDefault();
+  const text = $('taskTxt').value.trim();
+  if (!text){ $('taskTxt').focus(); return; }
+  if (!cfg.key){ toast('Primero cargá tu clave en Ajustes'); setView('settings'); return; }
+  const btn = $('assignBtn'); btn.disabled = true; btn.textContent = pick === 'auto' ? 'Buscando a quién le toca…' : 'Asignando…';
+  const agentId = pick === 'auto' ? await pickAgent(text) : pick;
+  const id = 't_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  store.set(id, { kind:'task', mode, agentId, text, status:'working', result:'', createdAt:Date.now(), updatedAt:Date.now(), seen:false });
+  $('taskTxt').value = '';
+  btn.disabled = false; btn.textContent = 'Asignar tarea';
+  toast(`${AG[agentId].name} tomó la tarea`);
+  runTask(id);
+});
+$('lists').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const id = b.closest('[data-id]').dataset.id, t = docs[id]; if (!t) return;
+  const act = b.dataset.act;
+  if (act === 'toggle'){ openTasks.has(id) ? openTasks.delete(id) : openTasks.add(id); store.set(id, { ...t, seen:true }); }
+  if (act === 'copy') copy(t.result || '');
+  if (act === 'redo'){ store.set(id, { ...t, status:'working', result:'', error:'', updatedAt:Date.now() }); runTask(id); }
+  if (act === 'del'){
+    if (b.dataset.armed){ openTasks.delete(id); store.del(id); }
+    else { b.dataset.armed = '1'; b.textContent = '¿Seguro?'; setTimeout(() => { if (b.isConnected){ delete b.dataset.armed; b.textContent = 'Borrar'; } }, 3000); }
+  }
+});
+
+/* ===== Chat ===== */
+const SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+const STOP = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>';
+function openSheet(id){
+  sheetAgent = id; const a = AG[id];
+  $('shPic').innerHTML = face(a); $('shName').textContent = a.name; $('shRole').textContent = `${a.role} · Oficina ${a.room}`;
+  $('sheet').hidden = $('scrim').hidden = false; document.body.style.overflow = 'hidden';
+  renderChat(true);
+}
+function closeSheet(){ sheetAgent = null; $('sheet').hidden = $('scrim').hidden = true; document.body.style.overflow = ''; }
+$('shClose').onclick = closeSheet; $('scrim').onclick = closeSheet;
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetAgent) closeSheet(); });
+$('shTask').onclick = () => { const id = sheetAgent; closeSheet(); pick = id; setView('tasks'); renderPicker(); setTimeout(() => $('taskTxt').focus(), 100); };
+$('shClear').onclick = e => {
+  const b = e.currentTarget;
+  if (!b.dataset.armed){ b.dataset.armed = '1'; b.textContent = '¿Seguro?'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Borrar chat'; }, 3000); return; }
+  delete b.dataset.armed; b.textContent = 'Borrar chat';
+  store.del('chat_' + sheetAgent);
+};
+function renderChat(scroll){
+  if (!sheetAgent) return;
+  const a = AG[sheetAgent], turns = (docs['chat_' + sheetAgent] || {}).turns || [], lv = chatLive.get(sheetAgent);
+  const box = $('msgs'), atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  let h = turns.map(t => t.role === 'user' ? `<div class="msg u">${esc(t.content)}</div>` : `<div class="msg a md">${md(t.content)}</div>`).join('');
+  if (lv) h += `<div class="msg a md">${lv.text ? md(lv.text) : thinking('Escribiendo')}</div>`;
+  if (!h) h = `<div class="chat-empty"><div class="pic">${face(a)}</div>Hola, soy ${esc(a.name)}. Te ayudo con ${esc(a.skill)}. ¿En qué andás?</div>`;
+  box.innerHTML = h;
+  if (scroll || atBottom) box.scrollTop = box.scrollHeight;
+  $('chatBtn').innerHTML = lv ? STOP : SEND;
+  $('chatBtn').setAttribute('aria-label', lv ? 'Parar' : 'Enviar');
+}
+$('chatIn').addEventListener('input', e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px'; });
+$('chatForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const agentId = sheetAgent, cur = chatLive.get(agentId);
+  if (cur){ cur.ctl.abort(); return; }
+  const text = $('chatIn').value.trim(); if (!text) return;
+  if (!cfg.key){ toast('Primero cargá tu clave en Ajustes'); return; }
+  const cid = 'chat_' + agentId, a = AG[agentId];
+  const turns = [ ...((docs[cid] || {}).turns || []), { role:'user', content:text } ].slice(-40);
+  $('chatIn').value = ''; $('chatIn').style.height = '';
+  const ctl = new AbortController(); chatLive.set(agentId, { text:'', ctl });
+  store.set(cid, { kind:'chat', agentId, turns, updatedAt:Date.now() });
+  renderChat(true);
+  // la API pide turnos alternados que empiecen por el usuario
+  const msgs = [];
+  turns.slice(-24).forEach(t => { const last = msgs[msgs.length-1]; if (last && last.role === t.role) last.content += '\n\n' + t.content; else msgs.push({ role:t.role, content:t.content }); });
+  while (msgs.length && msgs[0].role !== 'user') msgs.shift();
+  try {
+    const reply = await ask({ system: persona(a) + `\nHoy es ${today()}. Esto es una charla: respondé breve y conversacional, salvo que te pidan algo largo.`,
+      messages: msgs, maxTokens:2048, signal:ctl.signal,
+      onText: tx => { chatLive.get(agentId).text = tx; if (sheetAgent === agentId) renderChat(); } });
+    chatLive.delete(agentId);
+    store.set(cid, { kind:'chat', agentId, turns:[...turns, { role:'assistant', content:reply }].slice(-40), updatedAt:Date.now() });
+  } catch(err){
+    chatLive.delete(agentId);
+    if (err.partial) store.set(cid, { kind:'chat', agentId, turns:[...turns, { role:'assistant', content:err.partial + '\n\n*(cortado)*' }].slice(-40), updatedAt:Date.now() });
+    else renderAll();
+    if (!err.aborted) toast(err.message);
+  }
+});
+
+/* ===== Ajustes ===== */
+$('keyIn').value = cfg.key;
+$('modelSel').value = cfg.model;
+$('modelSel').onchange = e => { lsSet('ov-model', e.target.value); toast('Listo, los agentes usan ' + e.target.selectedOptions[0].textContent.split(' ·')[0]); };
+$('showKey').onclick = () => { const i = $('keyIn'); i.type = i.type === 'password' ? 'text' : 'password'; $('showKey').textContent = i.type === 'password' ? 'Ver' : 'Ocultar'; };
+$('saveKey').onclick = async () => {
+  const k = $('keyIn').value.trim(), st = $('keyStatus');
+  if (!k){ st.innerHTML = '<span class="bad">Pegá tu clave primero.</span>'; return; }
+  lsSet('ov-key', k); renderAll();
+  st.innerHTML = thinking('Probando la clave');
+  try { await ask({ maxTokens:10, messages:[{ role:'user', content:'Decí solo: ok' }] }); st.innerHTML = '<span class="ok">✓ Clave guardada. La oficina ya está trabajando.</span>'; }
+  catch(e){ st.innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+};
+$('wipe').onclick = e => {
+  const b = e.currentTarget;
+  if (!b.dataset.armed){ b.dataset.armed = '1'; b.textContent = 'Tocá de nuevo para borrar todo'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Borrar todas las tareas y chats'; }, 3500); return; }
+  delete b.dataset.armed; b.textContent = 'Borrar todas las tareas y chats';
+  docs = {}; lsSet('ov-docs', '{}'); renderAll(); toast('Se borró todo');
+};
+$('goSettings').onclick = () => setView('settings');
+
+/* ===== Utilidades ===== */
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function inl(s){
+  return esc(s).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[\s(])\*(?!\s)(.+?)\*(?=[\s.,;:!?)]|$)/g,'$1<em>$2</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+const LI = /^\s*([-*•]|\d+[.)])\s+/;
+function md(src){
+  const L = String(src).replace(/\r/g,'').split('\n'); let h = '', i = 0, m;
+  while (i < L.length){
+    const l = L[i];
+    if (/^```/.test(l)){ const c = []; i++; while (i < L.length && !/^```/.test(L[i])) c.push(L[i++]); i++; h += '<pre><code>' + esc(c.join('\n')) + '</code></pre>'; continue; }
+    if ((m = l.match(/^(#{1,4})\s+(.*)/))){ const lv = Math.min(m[1].length + 2, 5); h += `<h${lv}>${inl(m[2])}</h${lv}>`; i++; continue; }
+    if (/^\s*\|/.test(l)){
+      const rows = []; while (i < L.length && /^\s*\|/.test(L[i])) rows.push(L[i++]);
+      const cells = r => r.trim().replace(/^\||\|$/g,'').split('|').map(c => c.trim());
+      const body = rows.filter(r => !/^\s*\|?\s*:?-{2,}/.test(r));
+      h += '<div class="tbl"><table>' + body.map((r,k) => '<tr>' + cells(r).map(c => k ? `<td>${inl(c)}</td>` : `<th>${inl(c)}</th>`).join('') + '</tr>').join('') + '</table></div>';
+      continue;
+    }
+    if (LI.test(l)){
+      const ord = /^\s*\d/.test(l), it = [];
+      while (i < L.length && LI.test(L[i])) it.push(L[i++].replace(LI, ''));
+      h += (ord ? '<ol>' : '<ul>') + it.map(x => `<li>${inl(x)}</li>`).join('') + (ord ? '</ol>' : '</ul>'); continue;
+    }
+    if (/^\s*(---|\*\*\*)\s*$/.test(l)){ h += '<hr>'; i++; continue; }
+    if (!l.trim()){ i++; continue; }
+    const p = [L[i++].replace(/^>\s?/,'')];
+    while (i < L.length && L[i].trim() && !/^(#{1,4}\s|```|\s*\||\s*(---|\*\*\*)\s*$)/.test(L[i]) && !LI.test(L[i])) p.push(L[i++].replace(/^>\s?/,''));
+    h += '<p>' + p.map(inl).join('<br>') + '</p>';
+  }
+  return h;
+}
+function toast(t){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2400); }
+async function copy(text){
+  try { await navigator.clipboard.writeText(text); toast('Copiado'); }
+  catch(e){ toast('No se pudo copiar. Mantené apretado el texto.'); }
+}
+
+/* ===== Pantallas ===== */
+function setMode(m){
+  const prev = M(mode).n; mode = m; lsSet('ov-mode', m); document.body.dataset.mode = m;
+  const f = M(m);
+  $('arrow').classList.toggle('down', f.n < prev);
+  $('dig').textContent = f.n; $('floorName').textContent = f.floor; $('floorSub').textContent = 'Piso ' + f.label;
+  $('floors').innerHTML = MODES.map(x => `<button class="fbtn" data-mode="${x.id}" aria-pressed="${x.id === m}"><span class="ring">${x.n}</span><span>${x.label}</span></button>`).join('');
+  $('sugs').innerHTML = f.sugs.map(s => `<button type="button" class="sug">${esc(s)}</button>`).join('');
+  if (pick !== 'auto' && AG[pick].mode !== m) pick = 'auto';
+  renderPicker(); renderAll();
+}
+$('floors').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b && b.dataset.mode !== mode){ setMode(b.dataset.mode); if (navigator.vibrate) navigator.vibrate(15); } });
+$('sugs').addEventListener('click', e => { const b = e.target.closest('.sug'); if (b){ $('taskTxt').value = b.textContent; $('taskTxt').focus(); } });
+function renderPicker(){
+  $('picker').innerHTML = `<button type="button" class="chip" data-pick="auto" aria-pressed="${pick === 'auto'}"><span class="mini">✦</span>Que decida la oficina</button>` +
+    M(mode).agents.map(a => `<button type="button" class="chip" data-pick="${a.id}" aria-pressed="${pick === a.id}"><span class="mini">${face(a)}</span>${esc(a.name)}</button>`).join('');
+}
+$('picker').addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (b){ pick = b.dataset.pick; renderPicker(); } });
+
+function setView(v){
+  view = v;
+  [['office','tOffice','vOffice'],['tasks','tTasks','vTasks'],['settings','tSettings','vSettings']].forEach(([k,t,s]) => {
+    $(t).setAttribute('aria-selected', k === v); $(s).hidden = k !== v;
+  });
+  window.scrollTo(0, 0);
+}
+$('tOffice').onclick = () => setView('office'); $('tTasks').onclick = () => setView('tasks'); $('tSettings').onclick = () => setView('settings');
+
+function renderOffice(){
+  const all = tasks();
+  $('team').innerHTML = M(mode).agents.map(a => {
+    const mine = all.filter(t => t.agentId === a.id);
+    const busy = mine.filter(isBusy), fresh = mine.filter(t => t.status === 'done' && !t.seen), talking = chatLive.has(a.id);
+    let cls = '', st = 'Libre';
+    if (busy.length){ cls = 'busy'; st = 'Trabajando: ' + busy[0].text; }
+    else if (talking){ cls = 'busy'; st = 'Respondiéndote…'; }
+    else if (fresh.length){ cls = 'done'; st = fresh.length > 1 ? `${fresh.length} trabajos listos` : 'Trabajo listo para ver'; }
+    else if (mine.length) st = `Libre · ${mine.length} hecha${mine.length > 1 ? 's' : ''}`;
+    return `<button class="agent ${cls}" data-agent="${a.id}" style="--c:${a.c}">
+      <span class="room">${a.room}</span><span class="pic">${face(a)}</span>
+      <span class="nm">${esc(a.name)}</span><span class="rl">${esc(a.role)}</span>
+      <span class="state ${cls}"><i></i><em>${esc(st)}</em></span></button>`;
+  }).join('');
+  const busyAll = all.filter(isBusy).length + chatLive.size;
+  $('live').classList.toggle('on', busyAll > 0);
+  $('liveTxt').textContent = busyAll ? `${busyAll} trabajando` : 'Todos libres';
+  const here = all.filter(t => t.mode === mode);
+  $('teamSub').textContent = here.length ? `${here.length} tarea${here.length > 1 ? 's' : ''} en este piso` : 'Tocá a alguien para charlar';
+  const n = all.filter(t => isBusy(t) || (t.status === 'done' && !t.seen)).length;
+  $('badge').textContent = n; $('badge').hidden = !n;
+  $('setupNotice').hidden = !!cfg.key;
+}
+$('team').addEventListener('click', e => {
+  const d = e.target.closest('[data-agent]'); if (!d) return;
+  const a = d.dataset.agent, fresh = tasks().filter(t => t.agentId === a && t.status === 'done' && !t.seen);
+  if (fresh.length){ fresh.forEach(t => { openTasks.add(t.id); docs[t.id].seen = true; }); store.set(fresh[0].id, docs[fresh[0].id]); setView('tasks'); }
+  else openSheet(a);
+});
+function taskCard(t){
+  const a = AG[t.agentId];
+  const busy = isBusy(t), stale = t.status === 'working' && !busy, open = openTasks.has(t.id);
+  const pill = busy ? '<span class="pill busy">TRABAJANDO</span>' : t.status === 'done' ? '<span class="pill done">LISTA</span>' : `<span class="pill err">${stale ? 'CORTADA' : 'ERROR'}</span>`;
+  let body = '';
+  if (busy) body = `<div class="result md" data-live="${t.id}">${live.get(t.id) ? md(live.get(t.id)) : thinking('Pensando')}</div>`;
+  else if (t.result) body = `<div class="result md ${open ? '' : 'clamp'}">${md(t.result)}</div>`;
+  const err = t.status === 'error' && t.error ? `<p class="errline">${esc(t.error)}</p>` : stale ? '<p class="errline">Se cerró la app mientras trabajaba. Tocá Rehacer.</p>' : '';
+  const acts = busy ? '' : `<div class="acts">${t.result ? `<button class="ghost" data-act="toggle">${open ? 'Ver menos' : 'Ver todo'}</button><button class="ghost" data-act="copy">Copiar</button>` : ''}<button class="ghost" data-act="redo">Rehacer</button><button class="ghost danger" data-act="del">Borrar</button></div>`;
+  return `<article class="task ${t.status === 'done' && !t.seen ? 'new' : ''}" data-id="${t.id}"><header><span class="pic">${face(a)}</span><div><b>${esc(a.name)}</b><small>${esc(a.role)}</small></div>${pill}</header><p class="ttext">${esc(t.text)}</p>${body}${err}${acts}</article>`;
+}
+function renderTasks(){
+  const ts = tasks().filter(t => t.mode === mode), doing = ts.filter(isBusy), done = ts.filter(t => !isBusy(t));
+  $('lists').innerHTML =
+    (doing.length ? `<h2 class="h2">En curso <span>${doing.length}</span></h2><div class="tlist">${doing.map(taskCard).join('')}</div>` : '') +
+    `<h2 class="h2">Entregadas <span>${done.length}</span></h2>` +
+    (done.length ? `<div class="tlist">${done.map(taskCard).join('')}</div>` : `<div class="empty">Todavía no hay trabajos en ${esc(M(mode).label)}. Asigná uno arriba o tocá una sugerencia.</div>`);
+}
+function renderAll(){ renderOffice(); renderTasks(); if (sheetAgent) renderChat(); }
+
+/* Aviso de instalación en iPhone */
+const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone && !lsGet('ov-install-seen')){ $('installNotice').hidden = false; lsSet('ov-install-seen','1'); }
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+setMode(mode); setView('office');
+</script>
+</body>
+</html>
